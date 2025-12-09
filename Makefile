@@ -51,8 +51,6 @@ debug: CFLAGS += -g
 .PHONY: create_directory
 create_directory: | $(BUILD_OBJ_DIR) $(SRC_DIR) $(INCLUDE_DIR)
 
-build/obj/glad.o:
-	echo hi
 
 $(BUILD_OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_OBJ_DIR)
 	$(GCC) $(CFLAGS)  $< -o $@
