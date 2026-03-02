@@ -4,6 +4,10 @@
 .settings
 token
 
+
+#Project
+build/main
+
 # Prerequisites
 *.d
 

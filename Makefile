@@ -16,8 +16,6 @@ GLAD_INCLUDE_DIR := glad/include
 GLFW_INCLUDE_DIR := glfw3/include
 
 
-
-
 #Compiler flags
 INCLUDES := -I$(INCLUDE_DIR) -I$(GLAD_INCLUDE_DIR) -I$(GLFW_INCLUDE_DIR) -I../libkevmatrix/include
 CFLAGS := -Wall -MMD $(INCLUDES) -c
@@ -29,17 +27,19 @@ LDFLAGS := -lkevmatrix -lm -lglfw3
 PROGRAM_NAME := $(BUILD_DIR)/main
 
 srcs:=$(wildcard $(SRC_DIR)/*.c)
-
 objs := $(patsubst $(SRC_DIR)/%.c,$(BUILD_OBJ_DIR)/%.o, $(srcs))
-deps := $(patsubst $(BUILD_DIR)/%.o,$(BUILD_DIR)/%.d, $(objs))
+deps := $(patsubst $(BUILD_OBJ_DIR)/%.o,$(BUILD_OBJ_DIR)/%.d, $(objs))
 
-#Bug here **make: *** No rule to make target 'build/obj/glad.o', needed by 'build/main'.  Stop.**
-srcs +=glad/src/glad.c
 objs +=$(BUILD_OBJ_DIR)/glad.o
+deps +=$(BUILD_OBJ_DIR)/glad.d
 
 
 $(PROGRAM_NAME): $(objs)
 	$(GCC) $^ $(LDLIBS) $(LDFLAGS) -o $@
+
+build/obj/glad.o: glad/src/glad.c
+	$(GCC) $(CFLAGS) $< -o $@
+	@echo "porco dio"
 
 
 .PHONY: object_files
@@ -62,7 +62,7 @@ $(BUILD_OBJ_DIR) $(SRC_DIR) $(INCLUDE_DIR):
 
 .PHONY: clean
 clean:
-	rm  $(objs) $(STATIC_LIB_NAME) $(deps) $(PROGRAM_NAME)
+	rm  $(objs) $(STATIC_LIB_NAME) $(deps) $(PROGRAM_NAME) 
 
 print:
 	@echo "srcs:$(srcs)"
@@ -71,7 +71,7 @@ print:
 	@echo $(STATIC_DIR)
 	@echo $(SRC_DIR)
 	@echo $(BUILD_DIR)
-
+	@echo $(BUILD_OBJ_DIR)
 
 
 -include $(deps)

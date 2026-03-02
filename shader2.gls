@@ -1,0 +1,15 @@
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+
+uniform float culo;
+
+out vec3 ourColor;
+vec3 test;
+void main()
+{
+	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+	//test = vec3(aColor.x, culo, aColor.z);
+	//test = aColor.yxz;
+	ourColor = aColor;
+}
