@@ -1,19 +1,15 @@
 #version 330 core
 layout (location = 0) in vec3 aPos;
-//layout (location = 1) in vec3 aColor;
+layout (location = 1) in vec3 aColor;
 
-//uniform float culo;
+uniform float culo;
 
-//out vec3 ourColor;
-
-out vec4 vertexColor;
-
+out vec3 ourColor;
+vec3 test;
 void main()
 {
 	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-	vertexColor = vec4(aPos.x, 0.5f, 0.4f, 1.0f);
-	
 	//test = vec3(aColor.x, culo, aColor.z);
 	//test = aColor.yxz;
-	//ourColor = aColor;
+	ourColor = aColor;
 }

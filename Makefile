@@ -18,7 +18,7 @@ GLFW_INCLUDE_DIR := glfw3/include
 
 #Compiler flags
 INCLUDES := -I$(INCLUDE_DIR) -I$(GLAD_INCLUDE_DIR) -I$(GLFW_INCLUDE_DIR) -I../libkevmatrix/include
-CFLAGS := -Wall -MMD $(INCLUDES) -c
+CFLAGS := -Wall -MMD $(INCLUDES) -g -c
 
 #Linker flags
 LDLIBS := -L../libkevmatrix/build/static/lib -L./glfw3
@@ -62,7 +62,23 @@ $(BUILD_OBJ_DIR) $(SRC_DIR) $(INCLUDE_DIR):
 
 .PHONY: clean
 clean:
-	rm  $(objs) $(STATIC_LIB_NAME) $(deps) $(PROGRAM_NAME) 
+	rm  $(objs) $(STATIC_LIB_NAME) $(deps) $(PROGRAM_NAME) test/maintest maintest.o
+	
+	
+	
+	
+#====Some test
+.PHONY: test
+#test: CFLAGS += -g
+test: test/maintest
+
+test/maintest: maintest.o
+	$(GCC) $< -o $@
+
+maintest.o: test/maintest.c
+	$(GCC) $(CFLAGS) $< -o $@
+#=====
+
 
 print:
 	@echo "srcs:$(srcs)"
