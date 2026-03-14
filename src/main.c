@@ -12,6 +12,7 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "matrixcalc.h"
+#include "shader_manager.h"
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
@@ -21,27 +22,18 @@ void mouse_callback(GLFWwindow *window, int button, int action, int mods);
 void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 void processInput(GLFWwindow *window);
 
-void createTringle1();
-void createTringle2();
-void createTringles();
-void createTrianglesEbo();
-
-void drawTriangles();
-void drawLineStrip();
-
-GLuint shaderProgramID = 0;
 GLuint shaderProgramsIDs[10];
 
 //@formatter:off
 
 	float triangle1_big[] = {
-			50.0f, 50.0f, -20.0f,
+			200.0f, 200.0f, -20.0f,
 			150.0f, -25.0f, -20.0f,
-			30.0f, 70.0f, 70.0f
+			30.0f, 70.0f, -20.0f
 	};
 
 	float triangle1_vertices[] = {
-			-0.5f, -0.5f, 0.0f,
+			-0.9f, -0.5f, 0.0f,
 			0.5f, -0.6f, 0.0f,
 			0.0f, 0.5f,0.0f
 	};
@@ -105,11 +97,17 @@ typedef struct {
 	float vertices[9];
 } Triangle;
 
-void insert_triangle_vertices(Triangle *t, float *data) {
+typedef struct {
+	Triangle *t1;
+	Triangle *t2;
+	Triangle *t3;
+} Triangles;
+
+void triangle_insert_vertices(Triangle *t, float *data) {
 	memcpy((*t).vertices, data, 9 * sizeof(float));
 }
 
-void load_triangle_in_buffer(Triangle *t) {
+void triangle_load_in_buffer(Triangle *t) {
 	GLuint VBO;
 	glGenVertexArrays(1, &(*t).VAO);
 	glBindVertexArray((*t).VAO);
@@ -121,132 +119,10 @@ void load_triangle_in_buffer(Triangle *t) {
 	glEnableVertexAttribArray(0);
 }
 
-char* textFileToStringChar(char const *file_name) {
-	char *shaderSourceCode;
-	long numOfBytes = 0;
-
-	FILE *fp = fopen(file_name, "r");
-	if (fp == NULL) {
-		printf("File error\n");
-	}
-	fseek(fp, 0, SEEK_END);
-	numOfBytes = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	printf("Number of bytes: %ld\n", numOfBytes);
-	shaderSourceCode = (char*) malloc(numOfBytes);
-	if (shaderSourceCode == NULL) {
-		printf("malloc error\n");
-	}
-	fread(shaderSourceCode, sizeof(char), numOfBytes + 1, fp);
-	fclose(fp);
-	*(shaderSourceCode + numOfBytes) = '\0';
-	printf("The file: %s\n\n", shaderSourceCode);
-	return shaderSourceCode;
+void triangle_use_vao(Triangle *t) {
+	glBindVertexArray((*t).VAO);
 }
 
-//input: i nomi dei file, output id del programma shader compilato
-//
-GLuint install_shaders(char const *vertexshader, char const *fragmentshader) {
-	char *vertexShaderSource = textFileToStringChar(vertexshader);
-	char *fragmentShaderSource = textFileToStringChar(fragmentshader);
-
-	// build and compile our shader program
-	// ------------------------------------
-	// vertex shader
-	GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShaderID, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShaderID);
-	// check for shader compile errors
-	int success;
-	char infoLog[512];
-	glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		glGetShaderInfoLog(vertexShaderID, 512, NULL, infoLog);
-		printf("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n");
-	}
-
-	// fragment shader
-	GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShaderID, 1, &fragmentShaderSource, NULL);
-	glCompileShader(fragmentShaderID);
-
-	// check for shader compile errors
-	glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		glGetShaderInfoLog(fragmentShaderID, 512, NULL, infoLog);
-		printf("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n");
-	}
-
-	// link shaders
-	GLuint programID = glCreateProgram();
-	glAttachShader(programID, vertexShaderID);
-	glAttachShader(programID, fragmentShaderID);
-	glLinkProgram(programID);
-
-	// check for linking errors
-	glGetProgramiv(programID, GL_LINK_STATUS, &success);
-	if (!success) {
-		glGetProgramInfoLog(programID, 512, NULL, infoLog);
-		printf("ERROR::SHADER::PROGRAM::LINKING_FAILED\n");
-	}
-	glDeleteShader(vertexShaderID);
-	glDeleteShader(fragmentShaderID);
-	//glUseProgram(programID);
-	free(vertexShaderSource);
-	free(fragmentShaderSource);
-	return programID;
-}
-
-//Old function
-void install_shaders_old() {
-
-	char const *fname_shader = "./shader.gls";
-	char const *fname_fragment = "./fragment.gls";
-	char *vertexShaderSource = textFileToStringChar(fname_shader);
-	char *fragmentShaderSource = textFileToStringChar(fname_fragment);
-
-	// build and compile our shader program
-	// ------------------------------------
-	// vertex shader
-	GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShaderID, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShaderID);
-	// check for shader compile errors
-	int success;
-	char infoLog[512];
-	glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		glGetShaderInfoLog(vertexShaderID, 512, NULL, infoLog);
-		printf("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n");
-	}
-	// fragment shader
-	GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShaderID, 1, &fragmentShaderSource, NULL);
-	glCompileShader(fragmentShaderID);
-	// check for shader compile errors
-	glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		glGetShaderInfoLog(fragmentShaderID, 512, NULL, infoLog);
-		printf("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n");
-	}
-	// link shaders
-	shaderProgramID = glCreateProgram();
-	glAttachShader(shaderProgramID, vertexShaderID);
-	glAttachShader(shaderProgramID, fragmentShaderID);
-	glLinkProgram(shaderProgramID);
-	// check for linking errors
-	glGetProgramiv(shaderProgramID, GL_LINK_STATUS, &success);
-	if (!success) {
-		glGetProgramInfoLog(shaderProgramID, 512, NULL, infoLog);
-		printf("ERROR::SHADER::PROGRAM::LINKING_FAILED\n");
-	}
-	glDeleteShader(vertexShaderID);
-	glDeleteShader(fragmentShaderID);
-	glUseProgram(shaderProgramID);
-	free(vertexShaderSource);
-	free(fragmentShaderSource);
-
-}
 
 GLuint VAO_TRIANGLE1_BIG;
 void createTringle1_big() {
@@ -261,44 +137,8 @@ void createTringle1_big() {
 	glEnableVertexAttribArray(0);
 }
 
-GLuint VAO_TRIANGLE1;
-void createTringle1() {
-	GLuint VBO;
-	glGenVertexArrays(1, &VAO_TRIANGLE1);
-	glBindVertexArray(VAO_TRIANGLE1);
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle1_vertices), triangle1_vertices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
-	glEnableVertexAttribArray(0);
-}
 
-GLuint VAO_TRIANGLE2;
-void createTringle2() {
-	GLuint VBO;
-	glGenVertexArrays(1, &VAO_TRIANGLE2);
-	glBindVertexArray(VAO_TRIANGLE2);
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle2_vertices), triangle2_vertices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
-	glEnableVertexAttribArray(0);
-}
-
-GLuint VAO_TRIANGLES1;
-void createTringles() {
-	GLuint VBO;
-	glGenVertexArrays(1, &VAO_TRIANGLES1);
-	glBindVertexArray(VAO_TRIANGLES1);
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangles), triangles, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
-	glEnableVertexAttribArray(0);
-}
 
 GLuint VAO_TRIANGLES2;
 void createTrianglesEbo() {
@@ -321,41 +161,8 @@ void createTrianglesEbo() {
 	glEnableVertexAttribArray(0);
 }
 
-void drawTriangles() {
-	glBindVertexArray(VAO_TRIANGLE1);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
 
-	glBindVertexArray(VAO_TRIANGLE2);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
 
-	glBindVertexArray(VAO_TRIANGLES1);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	glBindVertexArray(VAO_TRIANGLES2);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-}
-
-void drawPoints() {
-	glBindVertexArray(VAO_TRIANGLE1);
-	glDrawArrays(GL_POINTS, 0, 3);
-
-	glBindVertexArray(VAO_TRIANGLE2);
-	glDrawArrays(GL_POINTS, 0, 3);
-
-	glBindVertexArray(VAO_TRIANGLES1);
-	glDrawArrays(GL_POINTS, 0, 6);
-}
-
-void drawLineStrip() {
-	//glBindVertexArray(ID_TRIANGLE1);
-	//glDrawArrays(GL_LINE_STRIP, 0, 3);
-
-	//glBindVertexArray(ID_TRIANGLE2);
-	//glDrawArrays(GL_LINE_STRIP, 0, 3);
-
-	glBindVertexArray(VAO_TRIANGLES1);
-	glDrawArrays(GL_LINE_STRIP, 0, 6);
-}
 
 void drawWithUniform() {
 	float time = glfwGetTime();
@@ -387,17 +194,28 @@ int main() {
 		return -1;
 	}
 
-	Triangle t1;
-	insert_triangle_vertices(&t1, triangle1_vertices);
-	load_triangle_in_buffer(&t1);
+
+	Triangle t1, t2, t3;
+	Triangles triangles;
+	triangles.t1 = &t1;
+	triangles.t2 = &t2;
+	triangles.t3 = &t3;
+	glfwSetWindowUserPointer(window, &triangles);
+
+	triangle_insert_vertices(&t1, triangle1_vertices);
+	triangle_load_in_buffer(&t1);
+	triangle_insert_vertices(&t2, triangle2_vertices);
+	triangle_load_in_buffer(&t2);
+	triangle_insert_vertices(&t3, triangle1_big);
+	triangle_load_in_buffer(&t3);
 	printf("hola\n");
 
 	//install_shaders_old();
-	shaderProgramsIDs[0] = install_shaders("shader.gls", "fragment.gls");
-	shaderProgramsIDs[1] = install_shaders("shader2.gls", "fragment2.gls");
-	shaderProgramsIDs[2] = install_shaders("shader3.gls", "fragment3.gls");
+	shaderProgramsIDs[0] = shaders_install("shader.gls", "fragment.gls");
+	shaderProgramsIDs[1] = shaders_install("shader2.gls", "fragment2.gls");
+	shaderProgramsIDs[2] = shaders_install("shader3.gls", "fragment3.gls");
 
-	shaderProgramsIDs[3] = install_shaders("shader4.gls", "fragment4.gls");
+	shaderProgramsIDs[3] = shaders_install("shader4.gls", "fragment4.gls");
 	int projectionUnifLoc = glGetUniformLocation(shaderProgramsIDs[3], "projection");
 	glUseProgram(shaderProgramsIDs[3]);
 	//Mat4x4 m4 = mat4x4_rotate(mat4x4_identity(), (Vec4 ) { 0, 0, 1, 1 }, degToRad(70));
@@ -407,23 +225,22 @@ int main() {
 	float r = 400;
 	float b = -300;
 	float t = 300;
-	float n = 10;
+	float n = 1;
 	float f = 100;
 	Mat4x4 m5 = mat4x4_projection(l, r, b, t, n, f);
 	mat4x4_print(&m5);
 	//Dio porcaccio, controlla GL_TRUE, vorrei fosse FALSE, COLUM major del cazzo
 	glUniformMatrix4fv(projectionUnifLoc, 1, GL_TRUE, &m5);
 
-	createTringle1_big();
 
 //	glUseProgram(shaderProgramsIDs[1]);
-	createTringle1();
-	//createTringle2();
-	//createTringles();
+
 	//createTrianglesEbo();
 
-	glBindVertexArray(t1.VAO);
+	glBindVertexArray(t2.VAO);
+	triangle_use_vao(&t1);
 
+	shader_hi();
 	printf("\nSMEGMA\n");
 	//mat4x4_print(triangle1_big);
 
@@ -440,11 +257,13 @@ int main() {
 		// ------
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//triangle_use_vao(&t1);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
-		//drawTriangles();
+		//triangle_use_vao(&t2);
+		//glDrawArrays(GL_TRIANGLES, 0, 3);
+
 //		drawWithUniform();
-		//drawPoints();
-		//drawLineStrip();
+
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------
@@ -486,7 +305,7 @@ void mouse_callback(GLFWwindow *window, int button, int action, int mods) {
 
 void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
 	char text[10];
-
+	Triangles *triangles = (Triangles*)glfwGetWindowUserPointer(window);
 	if (action == GLFW_PRESS) {
 		if (key == GLFW_KEY_0) {
 			printf("program 0:\n");
@@ -522,17 +341,19 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
 		}
 		if (0 == strcmp(text, "tri1")) {
 			printf("triangle 1:\n");
-			glBindVertexArray(VAO_TRIANGLE1);
+			triangle_use_vao((*triangles).t1);
+			//glBindVertexArray(VAO_TRIANGLE1);
 			return;
 		}
 		if (0 == strcmp(text, "tri2")) {
 			printf("triangle 2:\n");
-			glBindVertexArray(VAO_TRIANGLE2);
+			//glBindVertexArray(VAO_TRIANGLE2);
+			triangle_use_vao((*triangles).t2);
 			return;
 		}
 		if (0 == strcmp(text, "tri3")) {
 			printf("triangle 3:\n");
-			glBindVertexArray(VAO_TRIANGLE1_BIG);
+			triangle_use_vao((*triangles).t3);
 			return;
 		}
 	}
