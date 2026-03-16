@@ -10,6 +10,7 @@
 
 
 void shader_hi();
+//Return the shader ID to be used with glUseProgram
 GLuint shaders_install(char const *vertexshader, char const *fragmentshader);
 
 #endif /* SHADER_MANAGER_H_ */
