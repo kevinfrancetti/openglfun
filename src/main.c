@@ -11,6 +11,7 @@
 #define GLFW_INCLUDE_NONE
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
+#include "shapes.h"
 #include "matrixcalc.h"
 #include "shader_manager.h"
 
@@ -24,84 +25,15 @@ void processInput(GLFWwindow *window);
 
 GLuint shaderProgramsIDs[10];
 
-//@formatter:off
-
-	float triangle_vertices[] = {
-			-0.5f, -0.5f, 0.0f,
-			0.5f, -0.5f, 0.0f,
-			0.0f,  0.5f, 0.0f
-	};
-
-	float triangle1_big[] = {
-			200.0f, 200.0f, -2.0f,
-			150.0f, -205.0f, -2.0f,
-			300.0f, 70.0f, -2.0f
-	};
-
-	float triangle1_vertices[] = {
-			-0.9f, -0.5f, 0.0f,
-			0.5f, -0.6f, 0.0f,
-			0.0f, 0.5f,0.0f
-	};
-
-	float triangle2_vertices[] = {
-			0.5f, -0.5f, 0.0f,
-			0.5f, -0.1f, 0.0f,
-			0.3f, 0.5f,0.0f
-	};
-
-	float triangles[] = {
-			0.7f, 0.9f, 0.0f,
-			0.1f, 0.4f, 0.0f,
-			0.0f, 0.6f,0.0f,
-			-0.5f, -0.5f, 0.0f,
-			-0.5f, -0.1f, 0.0f,
-			-0.3f, -0.5f,0.0f
-	};
-
-	float vertices2[] = {
-			-1.0f, -1.0f, 0.0f,
-			1.0f, 0.0f, 0.0f,
-
-			0.0f, 1.0f, 0.0f,
-			0.0f, 1.0f, 0.0f,
-
-			1.0f, -1.0f, 0.0f,
-			0.0f, 0.0f, 1.0f,
-
-			-1.0f, -1.0f, 0.0f,
-			0.0f, 1.0f, 0.0f,
-
-			-1.0f, 1.0f, 0.0f,
-			1.0f, 0.0f, 0.0f,
-
-			0.5f, 1.0f, 0.0f,
-			1.0f, 1.0f, 1.0f
-	};
-
-	float triangle_colors[] = {
-			1.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 1.0f
-	};
-
-	float triangles_ebo[] = {
-	     0.5f,  0.5f, 0.0f,  // top right
-	     0.5f, -0.5f, 0.0f,  // bottom right
-	    -0.5f, -0.5f, 0.0f,  // bottom left
-	    -0.5f,  0.5f, 0.0f   // top left
-	};
-
-	unsigned int indices_triangles_ebo[] = {  // note that we start from 0!
-	    0, 1, 3,   // first triangle
-	    1, 2, 3    // second triangle
-	};
-//@formatter:on
+typedef struct {
+	GLuint VAO;
+	float vertices[3 * 3];
+} Triangle;
 
 typedef struct {
 	GLuint VAO;
-	float vertices[9];
-} Triangle;
+	float vertices[3 * 8]; //8 vertices and 3 float for each vertex
+} Cube;
 
 typedef struct {
 	Triangle *t1;
@@ -114,6 +46,10 @@ void triangle_set_vertices(Triangle *t, float *data) {
 	memcpy((*t).vertices, data, 9 * sizeof(float));
 }
 
+void cube_set_vertices(Cube *cube, float *data) {
+	memcpy((*cube).vertices, data, 3 * 8 * sizeof(float));
+}
+
 void triangle_load_in_buffer(Triangle *t) {
 	GLuint VBO;
 	glGenVertexArrays(1, &(*t).VAO);
@@ -124,11 +60,34 @@ void triangle_load_in_buffer(Triangle *t) {
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
 	glEnableVertexAttribArray(0);
-	glBindVertexArray(0);
+	glBindVertexArray(0); //unbind
 }
 
 void triangle_use_vao(Triangle *t) {
 	glBindVertexArray((*t).VAO);
+}
+
+void cube_load_in_buffer(Cube *cube) {
+	GLuint VBO;
+	GLuint VEO;
+	glGenVertexArrays(1, &(*cube).VAO);
+	glBindVertexArray((*cube).VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &VEO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VEO);
+
+	glBufferData(GL_ARRAY_BUFFER, 3 * 8 * sizeof(float), (*cube).vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_indices_ebo), cube_indices_ebo,
+	GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0); //HERE
+	glEnableVertexAttribArray(0);
+	glBindVertexArray(0); //unbind
+}
+
+void cube_use_vao(Cube *cube) {
+	glBindVertexArray((*cube).VAO);
 }
 
 GLuint VAO_TRIANGLES2;
@@ -152,13 +111,13 @@ void createTrianglesEbo() {
 	glEnableVertexAttribArray(0);
 }
 
-float g_l = -400;
-float g_r = 400;
-float g_b = -300;
-float g_t = 300;
+float g_l = -4;
+float g_r = 4;
+float g_b = -3;
+float g_t = 3;
 float g_n = 1;
 float g_f = 100;
-float g_rotation = 90;
+float g_rotation = 0;
 void update_uniform_projection_matrix() {
 	//float time = glfwGetTime();
 	//float value = (sin(time) / 2.0f) + 0.5f;
@@ -171,22 +130,24 @@ void update_uniform_projection_matrix() {
 	printf("f= %f \n", g_f);
 	printf("angle rotation= %f \n", g_rotation);
 
+	Vec4 rotation_axe;
+	rotation_axe.x = 0;
+	rotation_axe.y = 1;
+	rotation_axe.z = 0;
+	rotation_axe.w = 0;
 	//Mat4x4 mat_ortho = mat4x4_orthographic_projection(l, r, b, t, n, f);
 	Mat4x4 mat_persp = mat4x4_perspective_projection(g_l, g_r, g_b, g_t, g_n, g_f);
 	Mat4x4 mat_identity = mat4x4_identity();
-	Vec4 rotation_axe;
-	rotation_axe.x = 0;
-	rotation_axe.y = 0;
-	rotation_axe.z = 1;
-	rotation_axe.w = 0;
-	Mat4x4 mat_rotation = mat4x4_rotate(mat_identity, rotation_axe, degToRad(g_rotation));
+	Mat4x4 mat_scale = mat4x4_scale(mat_identity, (Vec4 ) { 3, 1, 1, 1 });
+	Mat4x4 mat_rotation = mat4x4_rotate(mat_scale, rotation_axe, degToRad(g_rotation));
+	Mat4x4 mat_translate = mat4x4_translate_composed(mat_rotation, (Vec4 ) { 0, 0, -5, 0 });
 
 	int projectionUnifLoc = glGetUniformLocation(shaderProgramsIDs[3], "projection");
 	int transformUnifLoc = glGetUniformLocation(shaderProgramsIDs[3], "transform");
 	glUseProgram(shaderProgramsIDs[3]);
 	//glUniformMatrix4fv(projectionUnifLoc, 1, GL_TRUE, &mat_ortho);
 	glUniformMatrix4fv(projectionUnifLoc, 1, GL_TRUE, &mat_persp);
-	glUniformMatrix4fv(transformUnifLoc, 1, GL_TRUE, &mat_rotation);
+	glUniformMatrix4fv(transformUnifLoc, 1, GL_TRUE, &mat_translate);
 }
 
 void drawWithUniform() {
@@ -221,6 +182,7 @@ int main() {
 	}
 
 	Triangle t1, t2, t3, t4;
+	Cube c1;
 	GameState game_state;
 	game_state.t1 = &t1;
 	game_state.t2 = &t2;
@@ -238,10 +200,13 @@ int main() {
 	triangle_load_in_buffer(&t3);
 	triangle_load_in_buffer(&t4);
 
-	float l = -400;
-	float r = 400;
-	float b = -300;
-	float t = 300;
+	cube_set_vertices(&c1, cube_verices);
+	cube_load_in_buffer(&c1);
+
+	float l = -40;
+	float r = 40;
+	float b = -30;
+	float t = 30;
 	float n = 1;
 	float f = 100;
 	Mat4x4 mat_persp = mat4x4_perspective_projection(l, r, b, t, n, f);
@@ -253,10 +218,13 @@ int main() {
 	mat4x4_print(&mat_persp);
 	mat4x4_print(&mat_ortho);
 	mat4x4_print(&mat_identity);
+	mat4x4_print(&mat_scale);
+	mat4x4_print(&mat_translate);
 
 	printf("hola\n");
 
-	//triangle_use_vao(&t4);
+//triangle_use_vao(&t4);
+	cube_use_vao(&c1);
 	shaderProgramsIDs[0] = shaders_install("shader.gls", "fragment.gls");
 	shaderProgramsIDs[1] = shaders_install("shader2.gls", "fragment2.gls");
 	shaderProgramsIDs[2] = shaders_install("shader3.gls", "fragment3.gls");
@@ -268,13 +236,12 @@ int main() {
 	glUniformMatrix4fv(projectionUnifLoc, 1, GL_TRUE, &mat_persp);
 	glUniformMatrix4fv(transformUnifLoc, 1, GL_TRUE, &mat_identity);
 
-	Vec4 v = (Vec4 ) { 0, 1, 0, 1 };
 	shader_hi();
 	printf("\nSMEGMA\n");
 	glUseProgram(shaderProgramsIDs[1]);
 
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	glEnable(GL_DEPTH_TEST);
 	while (!glfwWindowShouldClose(window)) {
@@ -292,7 +259,8 @@ int main() {
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		//triangle_use_vao(&t1);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		//glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 6*6, GL_UNSIGNED_INT, 0);
 		//triangle_use_vao(&t2);
 		//glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -340,7 +308,7 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
 	GameState *game_state = (GameState*) glfwGetWindowUserPointer(window);
 	char text[10];
 
-	if (action == GLFW_PRESS) {
+	if (action == GLFW_PRESS || action == GLFW_REPEAT) {
 		if (key == GLFW_KEY_0) {
 			printf("program 0:\n");
 			glUseProgram(shaderProgramsIDs[0]);
@@ -357,6 +325,7 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
 			printf("program 3:\n");
 			glUseProgram(shaderProgramsIDs[3]);
 		}
+
 		if (key == GLFW_KEY_N && mods == GLFW_MOD_SHIFT) {
 			printf("pressed: Shift + n\n");
 			g_n -= 1;
@@ -365,6 +334,7 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
 			printf("pressed: n\n");
 			g_n += 1;
 		}
+
 		if (key == GLFW_KEY_F && mods == GLFW_MOD_SHIFT) {
 			printf("pressed: Shift + f\n");
 			g_f -= 1;
@@ -373,6 +343,7 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
 			printf("pressed: f\n");
 			g_f += 1;
 		}
+
 		if (key == GLFW_KEY_L && mods == GLFW_MOD_SHIFT) {
 			printf("pressed: Shift + l\n");
 			g_l -= 1;
@@ -381,6 +352,7 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
 			printf("pressed: l\n");
 			g_l += 1;
 		}
+
 		if (key == GLFW_KEY_R && mods == GLFW_MOD_SHIFT) {
 			printf("pressed: Shift + r\n");
 			g_r -= 1;
@@ -389,6 +361,25 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
 			printf("pressed: r\n");
 			g_r += 1;
 		}
+
+		if (key == GLFW_KEY_B && mods == GLFW_MOD_SHIFT) {
+			printf("pressed: Shift + b\n");
+			g_b -= 1;
+		}
+		if (key == GLFW_KEY_B && mods != GLFW_MOD_SHIFT) {
+			printf("pressed: b\n");
+			g_b += 1;
+		}
+
+		if (key == GLFW_KEY_T && mods == GLFW_MOD_SHIFT) {
+			printf("pressed: Shift + t\n");
+			g_t -= 1;
+		}
+		if (key == GLFW_KEY_T && mods != GLFW_MOD_SHIFT) {
+			printf("pressed: t\n");
+			g_t += 1;
+		}
+
 		if (key == GLFW_KEY_J && mods == GLFW_MOD_SHIFT) {
 			printf("pressed: Shift + j\n");
 			g_rotation -= 1;
@@ -397,7 +388,7 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
 			printf("pressed: j\n");
 			g_rotation += 1;
 		}
-		//update_uniform_projection_matrix();
+		update_uniform_projection_matrix();
 
 	}
 
