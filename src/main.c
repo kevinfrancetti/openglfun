@@ -131,16 +131,16 @@ void update_uniform_projection_matrix() {
 	printf("angle rotation= %f \n", g_rotation);
 
 	Vec4 rotation_axe;
-	rotation_axe.x = 0;
+	rotation_axe.x = 1;
 	rotation_axe.y = 1;
 	rotation_axe.z = 0;
 	rotation_axe.w = 0;
 	//Mat4x4 mat_ortho = mat4x4_orthographic_projection(l, r, b, t, n, f);
 	Mat4x4 mat_persp = mat4x4_perspective_projection(g_l, g_r, g_b, g_t, g_n, g_f);
 	Mat4x4 mat_identity = mat4x4_identity();
-	Mat4x4 mat_scale = mat4x4_scale(mat_identity, (Vec4 ) { 3, 1, 1, 1 });
+	Mat4x4 mat_scale = mat4x4_scale(mat_identity, (Vec4 ) { 10, 10, 10, 1 });
 	Mat4x4 mat_rotation = mat4x4_rotate(mat_scale, rotation_axe, degToRad(g_rotation));
-	Mat4x4 mat_translate = mat4x4_translate_composed(mat_rotation, (Vec4 ) { 0, 0, -5, 0 });
+	Mat4x4 mat_translate = mat4x4_translate_composed(mat_rotation, (Vec4 ) { 0, 0, -50, 0 });
 
 	int projectionUnifLoc = glGetUniformLocation(shaderProgramsIDs[3], "projection");
 	int transformUnifLoc = glGetUniformLocation(shaderProgramsIDs[3], "transform");
